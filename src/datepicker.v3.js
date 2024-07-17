@@ -6,13 +6,13 @@ class DatePicker {
     this.selectedMonth = this.selectedDate ? this.selectedDate.getMonth() : null;
     this.today = new Date();
 
-    console.log(this.selectedDate, this.selectedYear, this.selectedMonth);
-
     // Options
     this.dateFormat = options.dateFormat || 'yyyy-mm-dd';
     this.minDate = options.minDate ? new Date(options.minDate) : null;
     this.maxDate = options.maxDate ? new Date(options.maxDate) : null;
     this.mobileLayout = options.mobileBreakPoint || 679;
+
+    this.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     this.setup();
   }
@@ -202,10 +202,13 @@ class DatePicker {
       yearCell.addEventListener('click', () => {
         this.selectedYear = year;
         DatePicker.yearSelect.value = year;
-        this.selectedMonth = null; // Reset selected month
+        if (!single) {
+          this.selectedMonth = null; // Reset selected month
+        }
         this.populateMonthSelect();
         this.triggerChange(DatePicker.yearSelect);
 
+        const reselect = this.shouldReselectMonth();
         if (single) {
           DatePicker.headerNormal.querySelector(
             '[yawdc-datepicker-year-month] [yawdc-year-select]'
@@ -213,7 +216,11 @@ class DatePicker {
 
           this.hide(DatePicker.yearView);
           this.show(DatePicker.headerNormal);
-          this.show(DatePicker.calendarView);
+
+          if (!reselect) {
+            this.show(DatePicker.calendarView);
+            this.renderCalendar();
+          }
         } else {
           this.showMonthGrid();
         }
@@ -227,15 +234,33 @@ class DatePicker {
 
   showMonthGrid(single = false) {
     this.hide(DatePicker.yearView);
+    this.hide(DatePicker.calendarView);
     const monthGrid = DatePicker.datepicker.querySelector('[yawdc-datepicker-months]');
     monthGrid.innerHTML = '';
 
     const months = this.getMonthsShort();
 
+    let shouldDisable = false;
+    const year = this.selectedYear;
+    const minDate = new Date(this.minDate.toLocaleDateString('en-US', { timeZone: this.timezone }));
+    const maxDate = new Date(this.maxDate.toLocaleDateString('en-US', { timeZone: this.timezone }));
+
+    if (year < minDate.getFullYear() || year > maxDate.getFullYear()) {
+      shouldDisable = true;
+    }
+
     months.forEach((month, index) => {
       const monthCell = document.createElement('div');
       monthCell.classList.add('month-cell');
       monthCell.textContent = month;
+
+      if (
+        (year === minDate.getFullYear() && index < minDate.getMonth()) ||
+        (year === maxDate.getFullYear() && index > maxDate.getMonth())
+      ) {
+        monthCell.classList.add('disabled');
+      }
+
       monthCell.addEventListener('click', () => {
         this.selectedMonth = index;
         DatePicker.monthSelect.value = index;
@@ -271,9 +296,39 @@ class DatePicker {
     }
   }
 
+  shouldReselectMonth() {
+    let triggerMonthGrid = false;
+    const minDate = new Date(this.minDate.toLocaleDateString('en-US', { timeZone: this.timezone }));
+    const maxDate = new Date(this.maxDate.toLocaleDateString('en-US', { timeZone: this.timezone }));
+
+    // When min year and out of bond month
+    if (this.selectedYear === minDate.getFullYear() && this.selectedMonth < minDate.getMonth()) {
+      triggerMonthGrid = true;
+      this.selectedMonth = minDate.getMonth();
+      DatePicker.headerNormal.querySelector('[yawdc-datepicker-year-month] [yawdc-month-select]').innerHTML = `${
+        this.getMonths()[minDate.getMonth()]
+      }`;
+    }
+
+    // When max year and out of bond month
+    if (this.selectedYear === maxDate.getFullYear() && this.selectedMonth > maxDate.getMonth()) {
+      triggerMonthGrid = true;
+      this.selectedMonth = maxDate.getMonth();
+      DatePicker.headerNormal.querySelector('[yawdc-datepicker-year-month] [yawdc-month-select]').innerHTML = `${
+        this.getMonths()[maxDate.getMonth()]
+      }`;
+    }
+
+    if (triggerMonthGrid) {
+      this.showMonthGrid(true);
+    }
+
+    return triggerMonthGrid;
+  }
+
   renderCalendar() {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const daysContainer = DatePicker.datepicker.querySelector('[yawdc-datepicker-days]');
+    let shouldDisable = false;
     daysContainer.innerHTML = '';
 
     const year = this.selectedYear;
@@ -282,12 +337,22 @@ class DatePicker {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDay = new Date(year, month, 1).getDay();
 
+    const minDate = new Date(this.minDate.toLocaleDateString('en-US', { timeZone: this.timezone }));
+    const maxDate = new Date(this.maxDate.toLocaleDateString('en-US', { timeZone: this.timezone }));
+
+    if (
+      (year < minDate.getFullYear() || year >= maxDate.getFullYear()) &&
+      (month <= minDate.getMonth() || month >= maxDate.getMonth())
+    ) {
+      shouldDisable = true;
+    }
+
     // Populate days
     for (let i = 0; i < firstDay; i++) {
       daysContainer.innerHTML += '<span>-</span>';
     }
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day).toLocaleDateString('en-US', { timeZone: timezone });
+      const date = new Date(year, month, day).toLocaleDateString('en-US', { timeZone: this.timezone });
       const formattedDate = this.formatDate(new Date(year, month, day), this.dateFormat);
       const dayClass = [];
       if (year === this.today.getFullYear() && month === this.today.getMonth() && day === this.today.getDate()) {
@@ -300,10 +365,13 @@ class DatePicker {
         month === this.selectedDate.getMonth() &&
         day === this.selectedDate.getDate() // Use day instead of date
       ) {
-        console.log(day);
-        console.log(date);
         dayClass.push('selected');
       }
+
+      if (shouldDisable && (day < minDate.getDate() || day > maxDate.getDate())) {
+        dayClass.push('disabled');
+      }
+
       daysContainer.innerHTML += `<span class="day ${dayClass.join(
         ' '
       )}" data-date="${date}" data-formatted="${formattedDate}">${day}</span>`;

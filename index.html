@@ -9,30 +9,30 @@
 </head>
 
 <body>
-	<input type="text" id="datepicker-input" />
+	<!-- <input type="text" id="datepicker-input" /> -->
 	<input type="text" id="datepicker-input2" />
-	<input type="text" id="datepicker-input3" />
+	<!-- <input type="text" id="datepicker-input3" /> -->
 	<script src="src/datepicker.v3.js"></script>
 	<script>
 		document.addEventListener("DOMContentLoaded", function () {
-			const datepickerInput =
-				document.getElementById("datepicker-input");
+			// const datepickerInput =
+			// 	document.getElementById("datepicker-input");
 			const datepickerInput2 =
 				document.getElementById("datepicker-input2");
-			const datepickerInput3 =
-				document.getElementById("datepicker-input3");
-			const options = {
-				dateFormat: "dd/mm/yyyy",
-				minDate: "2020-01-01",
-				maxDate: "2025-12-31",
-			};
-			const datepicker = new DatePicker(datepickerInput, options);
+			// const datepickerInput3 =
+			// 	document.getElementById("datepicker-input3");
+			// const options = {
+			// 	dateFormat: "dd/mm/yyyy",
+			// 	minDate: "2020-01-01",
+			// 	maxDate: "2025-12-31",
+			// };
+			// const datepicker = new DatePicker(datepickerInput, options);
 			const datepicker2 = new DatePicker(datepickerInput2, {
 				dateFormat: "dd/mm/yyyy",
 				minDate: "1980-01-01",
-				maxDate: "2085-12-31",
+				maxDate: new Date(),
 			});
-			const datepicker3 = new DatePicker(datepickerInput3);
+			// const datepicker3 = new DatePicker(datepickerInput3);
 		});
 	</script>
 </body>
